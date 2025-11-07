@@ -106,6 +106,7 @@ export default function Signup() {
             <input
               type="password"
               name="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
@@ -120,6 +121,7 @@ export default function Signup() {
             <input
               type="password"
               name="confirmPassword"
+              autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleInputChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
