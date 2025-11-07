@@ -1,103 +1,64 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const path = require('path');
+require('dotenv').config();
 
-// Load environment variables
-dotenv.config();
+const app = express();
 
-// Import database connection
-const connectDB = require('./config/db');
+// CORS Configuration
+const corsOptions = {
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  credentials: true,
+  optionsSuccessStatus: 200,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
-// Import middleware
-const requestLogger = require('./middleware/logger');
-const corsConfig = require('./middleware/corsConfig');
-const { errorHandler, notFound } = require('./middleware/errorHandler');
+app.use(cors(corsOptions));
+app.use(express.json());
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Serve static files
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+
+// MongoDB Connection
+mongoose.connect(process.env.MONGODB_URI, {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => console.log('✓ MongoDB connected'))
+.catch(err => console.error('✗ MongoDB connection error:', err));
 
 // Import routes
 const apiRoutes = require('./routes');
 
-// Initialize Express app
-const app = express();
-
-// ==================== DATABASE CONNECTION ====================
-connectDB();
-
-// ==================== MIDDLEWARE ====================
-
-// Body parser middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-
-// CORS middleware
-app.use(cors(corsConfig));
-
-// Request logger
-app.use(requestLogger);
-
-// Static files for PDF uploads ← ADD THIS
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// ==================== ROUTES ====================
-
-// API routes
+// Mount API routes
 app.use('/api', apiRoutes);
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.status(200).json({
-    success: true,
-    message: 'Freight Quotation Tool API',
-    version: '1.0.0',
-    docs: '/api'
-  });
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'Server is running' });
 });
-
-// ==================== ERROR HANDLING ====================
 
 // 404 handler
-app.use(notFound);
-
-// Global error handler
-app.use(errorHandler);
-
-// ==================== SERVER STARTUP ====================
-
-const PORT = process.env.PORT || 5000;
-
-const server = app.listen(PORT, () => {
-  console.log(`
-╔════════════════════════════════════════════════════════════╗
-║   Freight Quotation Tool API                               ║
-║   Version: 1.0.0                                           ║
-║   Environment: ${(process.env.NODE_ENV || 'development').padEnd(45)} ║
-║   Running on: http://localhost:${PORT}                     ║
-╚════════════════════════════════════════════════════════════╝
-  `);
+app.use((req, res) => {
+  res.status(404).json({ success: false, message: 'Route not found' });
 });
 
-// Handle server errors
-server.on('error', (error) => {
-  if (error.code === 'EADDRINUSE') {
-    console.error(`❌ Port ${PORT} is already in use`);
-  } else {
-    console.error('❌ Server error:', error);
-  }
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('📌 SIGTERM received, closing server gracefully...');
-  server.close(() => {
-    console.log('✅ Server closed');
-    process.exit(0);
+// Error handler
+app.use((err, req, res, next) => {
+  console.error('Error:', err);
+  res.status(500).json({
+    success: false,
+    message: 'Internal server error',
+    error: process.env.NODE_ENV === 'development' ? err.message : undefined
   });
 });
 
-module.exports = app;
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`✓ Server running on port ${PORT}`);
+  console.log(`✓ Environment: ${process.env.NODE_ENV}`);
+});
