@@ -2,54 +2,52 @@ import { create } from 'zustand'
 import apiClient from '../api/client'
 
 export const useAuthStore = create((set) => ({
+  // State
   user: JSON.parse(localStorage.getItem('user')) || null,
   token: localStorage.getItem('authToken') || null,
   isLoading: false,
   error: null,
 
-  // Google OAuth Login
+  // ===== AUTHENTICATION METHODS =====
+
+  // Google OAuth Login/Register
   loginWithGoogle: async (googleToken) => {
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.post('/auth/google', { token: googleToken })
       const { user, token } = response.data.data
-
+      
       localStorage.setItem('authToken', token)
       localStorage.setItem('user', JSON.stringify(user))
-
+      
       set({ user, token, isLoading: false })
       return response.data
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Login failed',
-        isLoading: false,
-      })
+      const errorMessage = error.response?.data?.message || 'Google login failed'
+      set({ error: errorMessage, isLoading: false })
       throw error
     }
   },
 
-  // Email/Password Register
-  register: async (name, email, password, confirmPassword) => {
+  // Email/Password Registration
+  register: async (name, email, password) => {
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.post('/auth/register', {
         name,
         email,
-        password,
-        confirmPassword
+        password
       })
       const { user, token } = response.data.data
-
+      
       localStorage.setItem('authToken', token)
       localStorage.setItem('user', JSON.stringify(user))
-
+      
       set({ user, token, isLoading: false })
       return response.data
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Registration failed',
-        isLoading: false,
-      })
+      const errorMessage = error.response?.data?.message || 'Registration failed'
+      set({ error: errorMessage, isLoading: false })
       throw error
     }
   },
@@ -60,50 +58,43 @@ export const useAuthStore = create((set) => ({
     try {
       const response = await apiClient.post('/auth/login', { email, password })
       const { user, token } = response.data.data
-
+      
       localStorage.setItem('authToken', token)
       localStorage.setItem('user', JSON.stringify(user))
-
+      
       set({ user, token, isLoading: false })
       return response.data
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Login failed',
-        isLoading: false,
-      })
+      const errorMessage = error.response?.data?.message || 'Login failed'
+      set({ error: errorMessage, isLoading: false })
       throw error
     }
   },
 
-  // Logout
-  logout: () => {
-    localStorage.removeItem('authToken')
-    localStorage.removeItem('user')
-    set({ user: null, token: null })
-  },
+  // ===== USER MANAGEMENT =====
 
-  // Update Profile
+  // Update User Profile
   updateProfile: async (profileData) => {
     set({ isLoading: true, error: null })
     try {
       const response = await apiClient.put('/auth/profile', profileData)
       const updatedUser = response.data.data
-
+      
       localStorage.setItem('user', JSON.stringify(updatedUser))
       set({ user: updatedUser, isLoading: false })
+      
       return response.data
     } catch (error) {
-      set({
-        error: error.response?.data?.message || 'Update failed',
-        isLoading: false,
-      })
+      const errorMessage = error.response?.data?.message || 'Update failed'
+      set({ error: errorMessage, isLoading: false })
       throw error
     }
   },
 
-  // Check Auth Status
+  // Verify Token & Check Auth Status
   checkAuth: async () => {
     const token = localStorage.getItem('authToken')
+    
     if (!token) {
       set({ user: null, token: null })
       return false
@@ -120,6 +111,22 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Clear Error
-  clearError: () => set({ error: null })
+  // ===== STATE MANAGEMENT =====
+
+  // Manual Setters (for direct state updates)
+  setUser: (user) => set({ user }),
+  setAuthToken: (token) => set({ token }),
+
+  // Logout - Clear all auth data
+  logout: () => {
+    localStorage.removeItem('authToken')
+    localStorage.removeItem('user')
+    set({ user: null, token: null, error: null })
+  },
+
+  // Clear Error Message
+  clearError: () => set({ error: null }),
+
+  // Set Loading State
+  setLoading: (isLoading) => set({ isLoading })
 }))
