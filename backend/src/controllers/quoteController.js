@@ -1,6 +1,9 @@
 const Quote = require('../models/Quote');
 const User = require('../models/User');
 const pdfGenerator = require('../services/pdfGenerator');
+const path = require('path');
+const fs = require('fs');
+
 
 class QuoteController {
   /**
@@ -389,52 +392,61 @@ async downloadQuotePDF(req, res) {
     }
 
     // Check authorization
-    if (req.user.role !== 'admin' && quote.user_id && quote.user_id.toString() !== req.user.userId) {
-      return res.status(403).json({
-        success: false,
-        message: 'Unauthorized to download this quote'
-      });
-    }
+    // Check authorization
+if (req.user.role !== 'admin' && (!quote.user_id || quote.user_id.toString() !== req.user.userId)) {
+  return res.status(403).json({
+    success: false,
+    message: 'Unauthorized to download this quote'
+  });
+}
+
 
     if (!quote.pdf_url) {
       return res.status(404).json({
         success: false,
-        message: 'PDF not yet generated. Please try again in a moment.'
+        message: 'PDF not yet generated'
       });
     }
 
-    // Return the actual PDF file
     const path = require('path');
     const fs = require('fs');
     
-    const pdfPath = path.join(__dirname, '../../uploads', quote.pdf_url.split('/').pop());
+    // Extract filename from pdf_url (remove /uploads/ prefix)
+    const filename = quote.pdf_url.split('/').pop();
+    const pdfPath = path.join(__dirname, '../../uploads', filename);
     
+    console.log('Serving PDF from:', pdfPath);
+
     if (!fs.existsSync(pdfPath)) {
+      console.error('PDF file not found:', pdfPath);
       return res.status(404).json({
         success: false,
         message: 'PDF file not found on server'
       });
     }
 
-    // Set correct headers
+    const fileSize = fs.statSync(pdfPath).size;
+    
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="quote_${id}.pdf"`);
-    res.setHeader('Content-Length', fs.statSync(pdfPath).size);
+    res.setHeader('Content-Length', fileSize);
 
-    // Stream the file
     const fileStream = fs.createReadStream(pdfPath);
     fileStream.pipe(res);
+
+    fileStream.on('error', (err) => {
+      console.error('Stream error:', err);
+      res.status(500).json({ success: false, message: 'Error streaming file' });
+    });
 
   } catch (error) {
     console.error('Download PDF error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to download PDF',
-      error: error.message
+      message: 'Failed to download PDF'
     });
   }
-}
-
+  }
 }
 
 module.exports = new QuoteController();
