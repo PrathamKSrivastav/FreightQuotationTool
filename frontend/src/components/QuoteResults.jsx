@@ -26,7 +26,7 @@ export default function QuoteResults({ quote: initialQuote }) {
     }
 
     // Use the correct API URL from environment
-    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
     const downloadUrl = `${apiBaseUrl}/quotes/${quote._id}/download`
 
     console.log('Downloading from:', downloadUrl)
