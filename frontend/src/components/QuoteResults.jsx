@@ -17,25 +17,33 @@ export default function QuoteResults({ quote: initialQuote }) {
   }
 
   try {
-    // Fetch latest quote data
-    const latestQuote = await apiClient.get(`/quotes/${quote._id}`)
-    setQuote(latestQuote.data.data)
-
-    // Download PDF directly from endpoint
-    const response = await fetch(
-      `http://localhost:5000/api/quotes/${quote._id}/download`,
-      {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
-        }
-      }
-    )
-
-    if (!response.ok) {
-      throw new Error('Failed to download PDF')
+    // Get token from localStorage
+    const token = localStorage.getItem('authToken')
+    
+    if (!token) {
+      alert('Authentication required')
+      return
     }
 
-    // Get the blob and create download link
+    // Use the correct API URL from environment
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+    const downloadUrl = `${apiBaseUrl}/quotes/${quote._id}/download`
+
+    console.log('Downloading from:', downloadUrl)
+
+    const response = await fetch(downloadUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/pdf'
+      }
+    })
+
+    if (!response.ok) {
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`)
+    }
+
+    // Get the blob and create download
     const blob = await response.blob()
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
@@ -46,10 +54,10 @@ export default function QuoteResults({ quote: initialQuote }) {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     
-    alert('PDF downloaded successfully!')
+    alert('✅ PDF downloaded successfully!')
   } catch (error) {
     console.error('Download error:', error)
-    alert('Failed to download PDF: ' + error.message)
+    alert('❌ Failed to download PDF: ' + error.message)
   }
 }
 
