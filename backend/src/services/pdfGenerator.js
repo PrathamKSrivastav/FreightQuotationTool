@@ -39,11 +39,9 @@ class PDFGenerator {
         doc.fontSize(11).font('Helvetica-Bold').fillColor('#000').text(`Status: ${quote.quote_status.toUpperCase()}`, 60, doc.y - 17);
         doc.moveDown(1.5);
 
-        // Divider
         doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke('#999');
         doc.moveDown(1);
 
-        // Quote Info
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#333').text('QUOTE INFORMATION');
         doc.fontSize(9).font('Helvetica').fillColor('#000');
         doc.text(`Quote ID: ${quote._id}`, 50);
@@ -52,14 +50,12 @@ class PDFGenerator {
         doc.text(`Email: ${user.email}`);
         doc.moveDown(1);
 
-        // Route
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#333').text('ROUTE');
         doc.fontSize(9).font('Helvetica').fillColor('#000');
         doc.text(`From: ${quote.origin_city}, ${quote.origin_country}`);
         doc.text(`To: ${quote.destination_city}, ${quote.destination_country}`);
         doc.moveDown(1);
 
-        // Shipment Details
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#333').text('SHIPMENT DETAILS');
         doc.fontSize(9).font('Helvetica').fillColor('#000');
         doc.text(`Weight: ${quote.weight} kg`);
@@ -70,7 +66,6 @@ class PDFGenerator {
         if (quote.special_services) doc.text(`Special Services: ${quote.special_services}`);
         doc.moveDown(1);
 
-        // Pricing
         doc.fontSize(10).font('Helvetica-Bold').fillColor('#333').text('PRICING');
         doc.fontSize(9).font('Helvetica').fillColor('#000');
         doc.text(`Base Cost: $${quote.base_cost.toFixed(2)}`);
@@ -83,22 +78,21 @@ class PDFGenerator {
         }
         doc.moveDown(0.5);
 
-        // Total
         doc.moveTo(50, doc.y).lineTo(550, doc.y).stroke('#999').lineWidth(2);
         doc.moveDown(0.5);
         doc.fontSize(12).font('Helvetica-Bold').fillColor('#DC2626').text('TOTAL: $' + quote.total_price.toFixed(2) + ' USD');
 
-        // Footer
         doc.moveDown(2);
         doc.fontSize(8).fillColor('#999').text('This quotation is valid for 30 days from the issue date.', { align: 'center' });
         doc.fontSize(8).fillColor('#999').text('Contact us to proceed with booking.', { align: 'center' });
 
-        // End document properly
         doc.end();
 
-        // Resolve when stream finishes
         stream.on('finish', () => {
-          resolve(`/uploads/${filename}`);
+          // IMPORTANT: Save only the filename, not full path with localhost
+          const pdfUrl = `/uploads/${filename}`;
+          console.log('PDF saved:', pdfUrl);
+          resolve(pdfUrl);
         });
       });
     } catch (error) {
