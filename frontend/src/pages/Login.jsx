@@ -1,109 +1,68 @@
-import { useEffect, useState } from 'react'
-import { GoogleLogin } from '@react-oauth/google'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthStore } from '../store/authStore'
 import apiClient from '../api/client'
+import Navbar from '../components/Navbar'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { user, login, loginWithGoogle, isLoading, error, clearError } = useAuthStore()
-  const [activeTab, setActiveTab] = useState('email')
-  const [formData, setFormData] = useState({ email: '', password: '' })
-  const [localError, setLocalError] = useState('')
+  const { setUser, setAuthToken } = useAuthStore()
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  })
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
 
-  useEffect(() => {
-    if (user) {
-      navigate(user.role === 'admin' ? '/admin' : '/quote')
-    }
-  }, [user, navigate])
-
-  const handleInputChange = (e) => {
+  const handleChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
-    setLocalError('')
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
   }
 
-  const handleEmailLogin = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!formData.email || !formData.password) {
-      setLocalError('Please fill in all fields')
-      return
-    }
+    setLoading(true)
+    setError('')
 
     try {
-      await login(formData.email, formData.password)
-      navigate('/quote')
-    } catch (error) {
-      setLocalError(error.response?.data?.message || 'Login failed')
-    }
-  }
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      await loginWithGoogle(credentialResponse.credential)
-    } catch (error) {
-      setLocalError('Google login failed')
+      // For now, using Google OAuth
+      // If you want to add email/password login, add API call here
+      const response = await apiClient.post('/auth/login', formData)
+      
+      if (response.data.success) {
+        setUser(response.data.data.user)
+        setAuthToken(response.data.data.authToken)
+        localStorage.setItem('authToken', response.data.data.authToken)
+        navigate('/quote')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError(err.response?.data?.message || 'Login failed')
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-white rounded-lg shadow-lg p-8">
-        {/* Logo */}
-        <div className="flex justify-center mb-8">
-          <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center">
-            <span className="text-white text-3xl font-bold">F</span>
-          </div>
-        </div>
+    <div>
+      <Navbar />
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md w-full bg-white rounded-lg shadow-md p-8">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6 text-center">
+            Freight Quotation Tool
+          </h2>
 
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-2">
-          Freight Quotation
-        </h1>
-        <p className="text-center text-gray-600 mb-8">
-          Get instant freight quotes in seconds
-        </p>
+          {error && (
+            <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
+              {error}
+            </div>
+          )}
 
-        {/* Error Message */}
-        {(error || localError) && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">
-            {error || localError}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b">
-          <button
-            onClick={() => {
-              setActiveTab('email')
-              setLocalError('')
-            }}
-            className={`flex-1 pb-2 text-sm font-semibold transition ${
-              activeTab === 'email'
-                ? 'text-red-500 border-b-2 border-red-500'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Email Login
-          </button>
-          <button
-            onClick={() => {
-              setActiveTab('google')
-              setLocalError('')
-            }}
-            className={`flex-1 pb-2 text-sm font-semibold transition ${
-              activeTab === 'google'
-                ? 'text-red-500 border-b-2 border-red-500'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            Google
-          </button>
-        </div>
-
-        {/* Email Login Form */}
-        {activeTab === 'email' && (
-          <form onSubmit={handleEmailLogin} className="space-y-4">
-            <div>
+          <form onSubmit={handleSubmit} autoComplete="on">
+            <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Email
               </label>
@@ -111,13 +70,15 @@ export default function Login() {
                 type="email"
                 name="email"
                 value={formData.email}
-                onChange={handleInputChange}
+                onChange={handleChange}
+                autoComplete="username"
+                placeholder="you@example.com"
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
-                placeholder="your@email.com"
+                required
               />
             </div>
 
-            <div>
+            <div className="mb-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Password
               </label>
@@ -125,46 +86,44 @@ export default function Login() {
                 type="password"
                 name="password"
                 value={formData.password}
-                onChange={handleInputChange}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                onChange={handleChange}
+                autoComplete="current-password"
                 placeholder="••••••"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-transparent"
+                required
               />
             </div>
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full bg-red-500 hover:bg-red-600 disabled:bg-red-300 text-white font-semibold py-2 rounded-lg transition"
+              disabled={loading}
+              className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-2 rounded-lg transition disabled:opacity-50"
             >
-              {isLoading ? 'Logging in...' : 'Login'}
+              {loading ? 'Logging in...' : 'Login'}
             </button>
+          </form>
 
-            <p className="text-center text-sm text-gray-600">
-              Don't have an account?{' '}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+              </div>
+            </div>
+
+            <div className="mt-6">
               <button
                 type="button"
-                onClick={() => navigate('/signup')}
-                className="text-red-500 hover:text-red-600 font-semibold"
+                onClick={() => window.location.href = '/api/auth/google'}
+                className="w-full bg-white text-gray-900 border border-gray-300 rounded-lg px-4 py-2 font-medium hover:bg-gray-50 transition"
               >
-                Sign up here
+                🔐 Sign in with Google
               </button>
-            </p>
-          </form>
-        )}
-
-        {/* Google Login */}
-        {activeTab === 'google' && (
-          <div className="flex justify-center">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setLocalError('Google login failed')}
-            />
+            </div>
           </div>
-        )}
-
-        <p className="text-center text-xs text-gray-500 mt-8">
-          By logging in, you agree to our Terms and Privacy Policy
-        </p>
+        </div>
       </div>
     </div>
   )
