@@ -50,7 +50,7 @@ export default function Login() {
       setLoading(true)
       setError('')
 
-      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+      const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
       
       // Send to BACKEND, not frontend!
       const res = await fetch(`${backendUrl}/auth/google`, {
