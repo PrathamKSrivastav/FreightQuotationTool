@@ -45,6 +45,37 @@ export default function Login() {
       setLoading(false)
     }
   }
+  const handleGoogleLogin = async (response) => {
+    try {
+      setLoading(true)
+      setError('')
+
+      const backendUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'
+      
+      // Send to BACKEND, not frontend!
+      const res = await fetch(`${backendUrl}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: response.credential })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        setUser(data.data.user)
+        setAuthToken(data.data.authToken)
+        localStorage.setItem('authToken', data.data.authToken)
+        navigate('/quote')
+      } else {
+        setError(data.message || 'Login failed')
+      }
+    } catch (err) {
+      console.error('Login error:', err)
+      setError('Login failed: ' + err.message)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <div>
