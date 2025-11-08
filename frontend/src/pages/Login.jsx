@@ -41,7 +41,7 @@ export default function Login() {
         const { user, token } = response.data.data
         localStorage.setItem('authToken', token)
         localStorage.setItem('user', JSON.stringify(user))
-        navigate('/dashboard')
+        navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
@@ -82,7 +82,7 @@ export default function Login() {
         const { user, token } = response.data.data
         localStorage.setItem('authToken', token)
         localStorage.setItem('user', JSON.stringify(user))
-        navigate('/dashboard')
+        navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed')
@@ -109,7 +109,7 @@ export default function Login() {
         const { user, token } = response.data.data
         localStorage.setItem('authToken', token)
         localStorage.setItem('user', JSON.stringify(user))
-        navigate('/dashboard')
+        navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Google login failed')
