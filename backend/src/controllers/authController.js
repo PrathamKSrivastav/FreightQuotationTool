@@ -90,22 +90,15 @@ class AuthController {
    */
   async emailPasswordRegister(req, res) {
     try {
-      const { name, email, password, confirmPassword } = req.body;
+      const { name, email, password } = req.body;
 
-      // Validation
-      if (!name || !email || !password || !confirmPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'All fields are required'
-        });
-      }
-
-      if (password !== confirmPassword) {
-        return res.status(400).json({
-          success: false,
-          message: 'Passwords do not match'
-        });
-      }
+// Validation
+if (!name || !email || !password) {
+  return res.status(400).json({
+    success: false,
+    message: 'All fields are required'
+  });
+}
 
       if (password.length < 6) {
         return res.status(400).json({
