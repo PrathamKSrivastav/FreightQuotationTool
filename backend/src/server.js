@@ -34,6 +34,12 @@ app.use(cors({
 // Handle preflight requests
 app.options('*', cors());
 
+app.use((req, res, next) => {
+  res.header('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.header('Cross-Origin-Embedder-Policy', 'require-corp');
+  next();
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
