@@ -47,12 +47,32 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // MongoDB Connection
-mongoose.connect(process.env.MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('✓ MongoDB connected'))
-.catch(err => console.error('✗ MongoDB connection error:', err));
+mongoose.connect(process.env.MONGODB_URI)
+  .then(async () => {
+    console.log('✅ MongoDB connected');
+    
+    // Migration: Drop old googleId unique index (safe to run multiple times)
+    try {
+      const indexes = await mongoose.connection.db.collection('users').indexes();
+      const hasOldIndex = indexes.some(idx => idx.name === 'googleId_1' && idx.unique === true);
+      
+      if (hasOldIndex) {
+        await mongoose.connection.db.collection('users').dropIndex('googleId_1');
+        console.log('✅ Dropped old googleId unique index');
+      }
+    } catch (error) {
+      // Error code 27 = IndexNotFound (already dropped)
+      if (error.code === 27) {
+        console.log('ℹ️  Old index already dropped or never existed');
+      } else {
+        console.log('ℹ️  Index migration skipped:', error.message);
+      }
+    }
+  })
+  .catch((err) => {
+    console.error('❌ MongoDB connection error:', err);
+  });
+
 
 // Import routes
 const apiRoutes = require('./routes');
