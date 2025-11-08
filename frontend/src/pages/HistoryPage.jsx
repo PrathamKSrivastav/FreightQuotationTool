@@ -34,35 +34,44 @@ export default function HistoryPage() {
     }
   }
 
-  const downloadPDF = async (pdfUrl) => {
-  if (!pdfUrl) {
-    alert('PDF is not yet generated')
-    return
-  }
-
+  const downloadPDF = async (quoteId) => {
   try {
-    const response = await fetch(`http://localhost:5000${pdfUrl}`)
-    if (!response.ok) {
-      throw new Error('Failed to download PDF')
+    // Use API endpoint to get PDF URL
+    const response = await apiClient.get(`/quotes/${quoteId}/download`)
+    
+    if (response.data.success && response.data.pdfUrl) {
+      const pdfUrl = response.data.pdfUrl
+      
+      // Construct full URL with environment variable
+      const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '')
+      const fullPdfUrl = pdfUrl.startsWith('http') ? pdfUrl : `${baseUrl}${pdfUrl}`
+      
+      console.log('Downloading from:', fullPdfUrl)
+      
+      // Fetch and download PDF
+      const pdfResponse = await fetch(fullPdfUrl)
+      
+      if (!pdfResponse.ok) {
+        throw new Error('PDF file not found')
+      }
+      
+      const blob = await pdfResponse.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `quote_${quoteId}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+    } else {
+      alert('PDF is not yet generated')
     }
-
-    const blob = await response.blob()
-    const url = window.URL.createObjectURL(blob)
-
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `quote_${new Date().getTime()}.pdf`
-    document.body.appendChild(link)
-    link.click()
-
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
   } catch (error) {
     console.error('Download error:', error)
-    alert('Failed to download PDF')
+    alert('Failed to download PDF. Please ensure the quote has been approved.')
   }
 }
-
 
   return (
     <div>
@@ -134,12 +143,12 @@ export default function HistoryPage() {
                     </td>
                     <td className="px-6 py-4">
                       <button
-                        onClick={() => downloadPDF(quote.pdf_url)}
-                        disabled={!quote.pdf_url}
-                        className="text-blue-500 hover:text-blue-600 disabled:text-gray-300 font-semibold"
-                      >
-                        {quote.pdf_url ? 'Download' : 'Pending'}
-                      </button>
+  onClick={() => downloadPDF(quote._id)}  // ← Changed from quote.pdf_path
+  className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600"
+  disabled={quote.quote_status !== 'approved'}
+>
+  Download
+</button>
                     </td>
                   </tr>
                 ))}
