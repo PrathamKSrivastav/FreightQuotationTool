@@ -15,10 +15,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: null // null for Google-only users
   },
-  googleId: {
+    googleId: {
     type: String,
-    unique: true,
-    sparse: true,
     default: null
   },
   role: {
@@ -70,5 +68,15 @@ userSchema.pre('save', async function(next) {
 userSchema.methods.comparePassword = async function(candidatePassword) {
   return await bcrypt.compare(candidatePassword, this.password);
 };
+
+userSchema.index(
+  { googleId: 1 },
+  {
+    unique: true,
+    partialFilterExpression: { 
+      googleId: { $type: "string" }  // Only index non-null strings
+    }
+  }
+);
 
 module.exports = mongoose.model('User', userSchema);
