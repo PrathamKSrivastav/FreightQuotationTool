@@ -34,44 +34,61 @@ export default function HistoryPage() {
     }
   }
 
-  const downloadPDF = async (quoteId) => {
+ const downloadPDF = async (quoteId) => {
   try {
-    // Use API endpoint to get PDF URL
-    const response = await apiClient.get(`/quotes/${quoteId}/download`)
+    console.log('Downloading quote:', quoteId)
     
-    if (response.data.success && response.data.pdfUrl) {
-      const pdfUrl = response.data.pdfUrl
-      
-      // Construct full URL with environment variable
-      const baseUrl = import.meta.env.VITE_API_URL.replace('/api', '')
-      const fullPdfUrl = pdfUrl.startsWith('http') ? pdfUrl : `${baseUrl}${pdfUrl}`
-      
-      console.log('Downloading from:', fullPdfUrl)
-      
-      // Fetch and download PDF
-      const pdfResponse = await fetch(fullPdfUrl)
-      
-      if (!pdfResponse.ok) {
-        throw new Error('PDF file not found')
+    // Make request to download endpoint with auth token
+    const response = await fetch(
+      `${import.meta.env.VITE_API_BASE_URL}/quotes/${quoteId}/download`,
+      {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`
+        }
       }
-      
-      const blob = await pdfResponse.blob()
-      const url = window.URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `quote_${quoteId}.pdf`
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-      window.URL.revokeObjectURL(url)
-    } else {
-      alert('PDF is not yet generated')
+    )
+    
+    console.log('Response status:', response.status)
+    console.log('Response headers:', response.headers.get('content-type'))
+    
+    if (!response.ok) {
+      const errorData = await response.json()
+      throw new Error(errorData.message || 'Failed to download PDF')
     }
+    
+    // Check if response is PDF
+    const contentType = response.headers.get('content-type')
+    if (!contentType || !contentType.includes('application/pdf')) {
+      throw new Error('Server did not return a PDF file')
+    }
+    
+    // Get the PDF blob
+    const blob = await response.blob()
+    console.log('PDF blob size:', blob.size)
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `quote_${quoteId}.pdf`
+    
+    // Trigger download
+    document.body.appendChild(link)
+    link.click()
+    
+    // Cleanup
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(url)
+    
+    console.log('✓ PDF downloaded successfully')
+    
   } catch (error) {
     console.error('Download error:', error)
-    alert('Failed to download PDF. Please ensure the quote has been approved.')
+    alert(`Failed to download PDF: ${error.message}`)
   }
 }
+
 
   return (
     <div>
