@@ -45,17 +45,26 @@ const userSchema = new mongoose.Schema({
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {
+  // Only hash if password is modified AND exists
   if (!this.isModified('password') || !this.password) {
     return next();
   }
+  
+  // Skip if password is already hashed (bcrypt hashes start with $2)
+  if (this.password.startsWith('$2')) {
+    return next();
+  }
+  
   try {
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);
     next();
   } catch (error) {
+    console.error('Password hashing error:', error);
     next(error);
   }
 });
+
 
 // Compare password
 userSchema.methods.comparePassword = async function(candidatePassword) {
