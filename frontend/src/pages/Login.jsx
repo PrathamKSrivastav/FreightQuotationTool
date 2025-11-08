@@ -39,9 +39,12 @@ export default function Login() {
       
       if (response.data.success) {
         const { user, token } = response.data.data
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('user', JSON.stringify(user))
-        navigate('/quotes')
+const { setUser, setAuthToken } = useAuthStore.getState()
+localStorage.setItem('authToken', token)
+localStorage.setItem('user', JSON.stringify(user))
+setUser(user)
+setAuthToken(token)
+navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed')
@@ -80,9 +83,12 @@ export default function Login() {
       
       if (response.data.success) {
         const { user, token } = response.data.data
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('user', JSON.stringify(user))
-        navigate('/quotes')
+const { setUser, setAuthToken } = useAuthStore.getState()
+localStorage.setItem('authToken', token)
+localStorage.setItem('user', JSON.stringify(user))
+setUser(user)
+setAuthToken(token)
+navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Signup failed')
@@ -107,9 +113,12 @@ export default function Login() {
       
       if (response.data.success) {
         const { user, token } = response.data.data
-        localStorage.setItem('authToken', token)
-        localStorage.setItem('user', JSON.stringify(user))
-        navigate('/quotes')
+const { setUser, setAuthToken } = useAuthStore.getState()
+localStorage.setItem('authToken', token)
+localStorage.setItem('user', JSON.stringify(user))
+setUser(user)
+setAuthToken(token)
+navigate('/quotes')
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Google login failed')
