@@ -383,70 +383,101 @@ async downloadQuotePDF(req, res) {
   try {
     const { id } = req.params;
     const quote = await Quote.findById(id);
-
+    
     if (!quote) {
       return res.status(404).json({
         success: false,
         message: 'Quote not found'
       });
     }
-
+    
     // Check authorization
-    // Check authorization
-if (req.user.role !== 'admin' && (!quote.user_id || quote.user_id.toString() !== req.user.userId)) {
-  return res.status(403).json({
-    success: false,
-    message: 'Unauthorized to download this quote'
-  });
-}
-
-
-    if (!quote.pdf_url) {
-      return res.status(404).json({
+    if (req.user.role !== 'admin' && (!quote.user_id || quote.user_id.toString() !== req.user.userId)) {
+      return res.status(403).json({
         success: false,
-        message: 'PDF not yet generated'
+        message: 'Unauthorized to download this quote'
       });
     }
-
-    const path = require('path');
-    const fs = require('fs');
     
-    // Extract filename from pdf_url (remove /uploads/ prefix)
-    const filename = quote.pdf_url.split('/').pop();
+    // Check if PDF needs to be generated
+    let pdfUrl = quote.pdf_url;
+    let needsGeneration = false;
+    
+    if (!pdfUrl) {
+      needsGeneration = true;
+      console.log('PDF URL not set, generating...');
+    } else {
+      // Check if file actually exists on disk
+      const filename = pdfUrl.split('/').pop();
+      const pdfPath = path.join(__dirname, '../../uploads', filename);
+      
+      if (!fs.existsSync(pdfPath)) {
+        needsGeneration = true;
+        console.log('PDF file missing on disk, regenerating...');
+      }
+    }
+    
+    // Generate PDF on-demand if needed
+    if (needsGeneration) {
+      try {
+        const user = quote.user_id 
+          ? await User.findById(quote.user_id) 
+          : { name: 'Guest', email: 'N/A' };
+        
+        pdfUrl = await pdfGenerator.generate(quote, user);
+        quote.pdf_url = pdfUrl;
+        await quote.save();
+        console.log(`✓ PDF generated on-demand for quote ${id}`);
+      } catch (error) {
+        console.error('PDF generation error:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to generate PDF',
+          error: error.message
+        });
+      }
+    }
+    
+    // Serve the PDF file
+    const filename = pdfUrl.split('/').pop();
     const pdfPath = path.join(__dirname, '../../uploads', filename);
     
     console.log('Serving PDF from:', pdfPath);
-
+    
     if (!fs.existsSync(pdfPath)) {
-      console.error('PDF file not found:', pdfPath);
-      return res.status(404).json({
+      console.error('PDF file still not found after generation:', pdfPath);
+      return res.status(500).json({
         success: false,
-        message: 'PDF file not found on server'
+        message: 'PDF file could not be generated or found'
       });
     }
-
+    
     const fileSize = fs.statSync(pdfPath).size;
     
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="quote_${id}.pdf"`);
     res.setHeader('Content-Length', fileSize);
-
+    
     const fileStream = fs.createReadStream(pdfPath);
     fileStream.pipe(res);
-
+    
     fileStream.on('error', (err) => {
       console.error('Stream error:', err);
-      res.status(500).json({ success: false, message: 'Error streaming file' });
+      if (!res.headersSent) {
+        res.status(500).json({ success: false, message: 'Error streaming file' });
+      }
     });
-
+    
   } catch (error) {
     console.error('Download PDF error:', error);
     res.status(500).json({
       success: false,
-      message: 'Failed to download PDF'
+      message: 'Failed to download PDF',
+      error: error.message
     });
   }
-  }
+}
+
 }
 
 module.exports = new QuoteController();
